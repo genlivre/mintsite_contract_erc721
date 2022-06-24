@@ -26,3 +26,10 @@
 
 ### 再度verify
 ```npx hardhat clean```
+
+## 注意点
+deployを行うために、Contractの初期値を設定する必要がある。  
+初期値は  
+- deploy.jsの引数
+- arguments.js
+で指定する。
