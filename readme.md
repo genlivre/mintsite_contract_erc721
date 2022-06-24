@@ -33,3 +33,5 @@ deployを行うために、Contractの初期値を設定する必要がある。
 - deploy.jsの引数
 - arguments.js
 で指定する。
+
+参考：[hardhat-etherscan](https://hardhat.org/plugins/nomiclabs-hardhat-etherscan)
