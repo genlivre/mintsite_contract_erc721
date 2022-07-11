@@ -1,3 +1,3 @@
 module.exports = [
-  'MINTSITE TEST', 'MT', 'https://example.com/', 'https://example.com/revealed/'
+  // 'MINTSITE', 'MT', 'https://example.com', 'https://example.com'
 ];

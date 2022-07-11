@@ -1,6 +1,6 @@
 async function main() {
   const NFT = await ethers.getContractFactory("NFT")
-  const nft = await NFT.deploy('MINTSITE TEST', 'MT', 'https://example.com/', 'https://example.com/revealed/')
+  const nft = await NFT.deploy()
   console.log("Contract deployed to address:", nft.address)
 }
 main()

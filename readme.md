@@ -21,7 +21,12 @@
 ```npx hardhat run scripts/deploy.js --network rinkeby```
 
 ### etherscan(Rinkeby)へverify
+#### 引数なしの場合
+```npx hardhat verify --contract contracts/NFT.sol:NFT --network rinkeby デプロイしたコントラクトAddress```
+
+#### 引数ありの場合
 ```npx hardhat verify --constructor-args ./scripts/arguments.js --contract contracts/NFT.sol:NFT --network rinkeby デプロイしたコントラクトAddress```
+```npx hardhat verify --constructor-args ./scripts/arguments.js --contract contracts/NFT.sol:NFT --network rinkeby 0x861cfD8Fe9816517a5FD7d80CFC5E15092F6d060```
 
 ### 再度verify
 ```npx hardhat clean```
