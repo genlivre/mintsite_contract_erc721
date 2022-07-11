@@ -1,25 +1,35 @@
 //SPDX-License-Identifier: MIT
 pragma solidity ^0.8.15;
-import "@openzeppelin/contracts/token/ERC721/extensions/ERC721Enumerable.sol";
 import "@openzeppelin/contracts/access/Ownable.sol";
+import "@openzeppelin/contracts/token/ERC721/extensions/ERC721Enumerable.sol";
+import "@openzeppelin/contracts/utils/Strings.sol";
 import "@openzeppelin/contracts/utils/cryptography/MerkleProof.sol";
+import "@openzeppelin/contracts/token/ERC721/extensions/ERC721Pausable.sol";
+import "hardhat/console.sol";
 
-contract NFT is ERC721Enumerable, Ownable {
+contract NFT is ERC721Enumerable, Ownable, Pausable {
     using Strings for uint256;
 
     string baseURI = "";
-    string public baseExtension = ".json";
-    uint256 public price = 0 ether;
-    uint256 public maxSupply = 10000;
-    uint256 public mintLimit = 10;
-    bool public saleStart = false;
-    bool public revealed = false;
-    string public notRevealedUri;
+    uint256 public prePrice = 0.01 ether;
+    uint256 public pubPrice = 0.02 ether;
+
     string public contractName = "MINT SITE";
     string public contractSymbol = "MINT";
+
+    bool public preSaleStart = false;
+    bool public pubSaleStart = false;
+    bool public revealed = false;
+
+    string public BASE_EXTENSION = ".json";
+    uint256 public MAX_SUPPLY = 10000;
+    uint256 public constant PUBLIC_MAX_PER_TX = 10;
+    uint256 public constant PRESALE_MAX_PER_WALLET = 5;
+
+    string public notRevealedUri;
     bytes32 public merkleRoot;
-    mapping(address => uint256) public minted;
-    mapping(address => bool) public claimed;
+
+    mapping(address => uint256) public whiteListClaimed;
 
     constructor() ERC721(contractName, contractSymbol) {}
 
@@ -29,18 +39,14 @@ contract NFT is ERC721Enumerable, Ownable {
     }
 
     // public
-    function mint(uint256 quantity) public payable {
+    function pubMint(uint256 _quantity) public payable whenNotPaused {
         uint256 supply = totalSupply();
-        require(saleStart);
-        require(quantity > 0);
-        require(quantity <= mintLimit);
-        require(supply + quantity <= maxSupply);
+        uint256 cost = pubPrice * _quantity;
+        mintCheck(_quantity, supply, cost);
+        require(!pubSaleStart, "Presale is active.");
+        require(_quantity <= PUBLIC_MAX_PER_TX, "Mint amount over");
 
-        if (msg.sender != owner()) {
-            require(msg.value >= price * quantity);
-        }
-
-        for (uint256 i = 1; i <= quantity; i++) {
+        for (uint256 i = 1; i <= _quantity; i++) {
             _safeMint(msg.sender, supply + i);
         }
     }
@@ -50,25 +56,42 @@ contract NFT is ERC721Enumerable, Ownable {
         return bytes32(uint256(uint160(addr)));
     }
 
-    function whitelistMint(bytes32[] calldata merkleProof, uint256 quantity)
+    function preMint(uint256 _quantity, bytes32[] calldata _merkleProof)
         public
         payable
+        whenNotPaused
     {
-        require(claimed[msg.sender] == false, "already claimed");
-        claimed[msg.sender] = true;
+        uint256 supply = totalSupply();
+        uint256 cost = prePrice * _quantity;
+        mintCheck(_quantity, supply, cost);
+        require(preSaleStart, "Presale is not active.");
+
+        bytes32 leaf = keccak256(abi.encodePacked(msg.sender));
+
         require(
-            MerkleProof.verify(
-                merkleProof,
-                merkleRoot,
-                toBytes32(msg.sender)
-            ) == true,
-            "invalid merkle proof"
+            MerkleProof.verify(_merkleProof, merkleRoot, leaf),
+            "Invalid Merkle Proof"
         );
 
-        uint256 supply = totalSupply();
-        for (uint256 i = 1; i <= quantity; i++) {
-            _mint(msg.sender, supply + i);
+        require(
+            whiteListClaimed[msg.sender] + _quantity <= PRESALE_MAX_PER_WALLET,
+            "Already claimed max"
+        );
+
+        for (uint256 i = 1; i <= _quantity; i++) {
+            _safeMint(msg.sender, supply + i);
+            whiteListClaimed[msg.sender]++;
         }
+    }
+
+    function mintCheck(
+        uint256 _quantity,
+        uint256 supply,
+        uint256 cost
+    ) private view {
+        require(_quantity > 0, "Mint amount cannot be zero");
+        require(supply + _quantity <= MAX_SUPPLY, "MAXSUPPLY over");
+        require(msg.value >= cost, "Not enough funds");
     }
 
     function walletOfOwner(address _address)
@@ -91,10 +114,7 @@ contract NFT is ERC721Enumerable, Ownable {
         override
         returns (string memory)
     {
-        require(
-            _exists(tokenId),
-            "ERC721Metadata: URI query for nonexistent token"
-        );
+        require(_exists(tokenId), "URI query for nonexistent token");
 
         if (revealed == false) {
             return notRevealedUri;
@@ -107,40 +127,13 @@ contract NFT is ERC721Enumerable, Ownable {
                     abi.encodePacked(
                         currentBaseURI,
                         tokenId.toString(),
-                        baseExtension
+                        BASE_EXTENSION
                     )
                 )
                 : "";
     }
 
     // only owner
-    // 値を設定
-    function setContractDatum(
-        string memory _cn,
-        string memory _symbol,
-        string memory _notRevealedURI,
-        string memory _newBaseURI,
-        uint256 _maxSupply,
-        uint256 _mintLimit,
-        uint256 _price
-    ) public onlyOwner {
-        contractName = _cn;
-        contractSymbol = _symbol;
-        notRevealedUri = _notRevealedURI;
-        baseURI = _newBaseURI;
-        maxSupply = _maxSupply;
-        mintLimit = _mintLimit;
-        price = _price;
-    }
-
-    function setContractName(string memory _cn) public onlyOwner {
-        contractName = _cn;
-    }
-
-    function setContractSymbol(string memory _symbol) public onlyOwner {
-        contractSymbol = _symbol;
-    }
-
     function setNotRevealedURI(string memory _notRevealedURI) public onlyOwner {
         notRevealedUri = _notRevealedURI;
     }
@@ -149,20 +142,12 @@ contract NFT is ERC721Enumerable, Ownable {
         baseURI = _newBaseURI;
     }
 
-    function setBaseExtension(string memory _baseExtension) public onlyOwner {
-        baseExtension = _baseExtension;
+    function setPrePrice(uint256 _price) public onlyOwner {
+        prePrice = _price;
     }
 
-    function setMaxSupply(uint256 _maxSupply) public onlyOwner {
-        maxSupply = _maxSupply;
-    }
-
-    function setMintLimit(uint256 _mintLimit) public onlyOwner {
-        mintLimit = _mintLimit;
-    }
-
-    function setPrice(uint256 _price) public onlyOwner {
-        price = _price;
+    function setPubPrice(uint256 _price) public onlyOwner {
+        pubPrice = _price;
     }
 
     function setMerkleRoot(bytes32 _merkleRoot) public onlyOwner {
@@ -170,8 +155,12 @@ contract NFT is ERC721Enumerable, Ownable {
     }
 
     // 動作
-    function switchSaleStart(bool _state) external onlyOwner {
-        saleStart = _state;
+    function setPresale(bool _state) public onlyOwner {
+        preSaleStart = _state;
+    }
+
+    function setPubsale(bool _state) public onlyOwner {
+        pubSaleStart = _state;
     }
 
     function reveal() public onlyOwner {
