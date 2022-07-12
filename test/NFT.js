@@ -5,6 +5,58 @@ const keccak256 = require('keccak256')
 
 use(require('chai-as-promised'))
 
+describe('baseURI', function () {
+  it('baseURIが更新されることを確認', async () => {
+    const [account] = await ethers.getSigners();
+    const contract = await ethers.getContractFactory("NFT");
+    const token = await contract.deploy();
+    await token.deployed();
+
+    // 未MINT時のエラー検証
+    await expect(
+      token.tokenURI(1)
+    ).to.be.rejectedWith('URI query for nonexistent token');
+
+    // パブリックセール開始を設定
+    await token.setPubsale(true)
+    expect(await token.pubSaleStart()).to.equal(true);
+
+    // pubMintが叩けることを確認
+    const quantity = 1;
+    const pubPrice = await token.pubPrice();
+
+    expect(
+      token.pubMint(quantity, {
+        value: pubPrice,
+      })
+    );
+
+    // notRevealURI未定義時のエラーを検証
+    await expect(
+      token.tokenURI(1)
+    ).to.be.rejectedWith('Undefined notRevealURI');
+
+
+    // URIを設定
+    const baseURI = 'https://example.com/'
+    const notRevealedURI = 'https://example.com/not-revealed/'
+    await token.setBaseURI(baseURI)
+    await token.setNotRevealedURI(notRevealedURI)
+
+
+    // リビール前のtokenURIを検証
+    const tokenId = 1
+    let tokenURI = await token.tokenURI(tokenId)
+
+    expect(tokenURI).to.equal(`${notRevealedURI}${tokenId}.json`)
+
+    // リビール後のtokenURIを検証
+    await token.reveal()
+    tokenURI = await token.tokenURI(tokenId)
+    expect(tokenURI).to.equal(`${baseURI}${tokenId}.json`)
+  })
+});
+
 describe('WhitelistSale', function () {
   it('Whitelistに登録されているアカウントのみがMINTできることを確認', async () => {
     const accounts = await ethers.getSigners();

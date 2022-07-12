@@ -10,7 +10,7 @@ import "hardhat/console.sol";
 contract NFT is ERC721Enumerable, Ownable, Pausable {
     using Strings for uint256;
 
-    string baseURI = "";
+    string private _baseTokenURI;
     uint256 public prePrice = 0.01 ether;
     uint256 public pubPrice = 0.02 ether;
 
@@ -26,7 +26,7 @@ contract NFT is ERC721Enumerable, Ownable, Pausable {
     uint256 public constant PUBLIC_MAX_PER_TX = 10;
     uint256 public constant PRESALE_MAX_PER_WALLET = 5;
 
-    string public notRevealedUri;
+    string public notRevealedURI;
     bytes32 public merkleRoot;
 
     mapping(address => uint256) public whiteListClaimed;
@@ -35,7 +35,7 @@ contract NFT is ERC721Enumerable, Ownable, Pausable {
 
     // internal
     function _baseURI() internal view virtual override returns (string memory) {
-        return baseURI;
+        return _baseTokenURI;
     }
 
     // public
@@ -43,7 +43,7 @@ contract NFT is ERC721Enumerable, Ownable, Pausable {
         uint256 supply = totalSupply();
         uint256 cost = pubPrice * _quantity;
         mintCheck(_quantity, supply, cost);
-        require(!pubSaleStart, "Presale is active.");
+        require(pubSaleStart, "Presale is active.");
         require(_quantity <= PUBLIC_MAX_PER_TX, "Mint amount over");
 
         for (uint256 i = 1; i <= _quantity; i++) {
@@ -117,15 +117,23 @@ contract NFT is ERC721Enumerable, Ownable, Pausable {
         require(_exists(tokenId), "URI query for nonexistent token");
 
         if (revealed == false) {
-            return notRevealedUri;
+            require(bytes(notRevealedURI).length > 1, "Undefined notRevealURI");
+            return
+                string(
+                    abi.encodePacked(
+                        notRevealedURI,
+                        tokenId.toString(),
+                        BASE_EXTENSION
+                    )
+                );
         }
 
-        string memory currentBaseURI = _baseURI();
+        string memory baseURI = _baseURI();
         return
-            bytes(currentBaseURI).length > 0
+            bytes(baseURI).length > 0
                 ? string(
                     abi.encodePacked(
-                        currentBaseURI,
+                        baseURI,
                         tokenId.toString(),
                         BASE_EXTENSION
                     )
@@ -135,11 +143,11 @@ contract NFT is ERC721Enumerable, Ownable, Pausable {
 
     // only owner
     function setNotRevealedURI(string memory _notRevealedURI) public onlyOwner {
-        notRevealedUri = _notRevealedURI;
+        notRevealedURI = _notRevealedURI;
     }
 
-    function setBaseURI(string memory _newBaseURI) public onlyOwner {
-        baseURI = _newBaseURI;
+    function setBaseURI(string calldata baseURI) external onlyOwner {
+        _baseTokenURI = baseURI;
     }
 
     function setPrePrice(uint256 _price) public onlyOwner {

@@ -26,7 +26,7 @@
 
 #### 引数ありの場合
 ```npx hardhat verify --constructor-args ./scripts/arguments.js --contract contracts/NFT.sol:NFT --network rinkeby デプロイしたコントラクトAddress```
-```npx hardhat verify --constructor-args ./scripts/arguments.js --contract contracts/NFT.sol:NFT --network rinkeby 0xebC0c2b69C77610091D3Ed71241870a5Fe198c4B```
+```npx hardhat verify --contract contracts/NFT.sol:NFT --network rinkeby 0xF047bbA36390E21fa2Bc43514BbB4F880822d2D7```
 
 ### 再度verify
 ```npx hardhat clean```
