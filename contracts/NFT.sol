@@ -175,6 +175,14 @@ contract NFT is ERC721Enumerable, Ownable, Pausable {
         revealed = true;
     }
 
+    function pause() public onlyOwner whenNotPaused {
+        _pause();
+    }
+
+    function unpause() public onlyOwner whenPaused {
+        _unpause();
+    }
+
     function withdrawRevenueShare() external onlyOwner {
         uint256 sendAmount = address(this).balance;
 
