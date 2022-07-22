@@ -5,9 +5,10 @@ import "@openzeppelin/contracts/token/ERC721/extensions/ERC721Enumerable.sol";
 import "@openzeppelin/contracts/utils/Strings.sol";
 import "@openzeppelin/contracts/utils/cryptography/MerkleProof.sol";
 import "@openzeppelin/contracts/token/ERC721/extensions/ERC721Pausable.sol";
+import "@openzeppelin/contracts/security/ReentrancyGuard.sol";
 import "hardhat/console.sol";
 
-contract NFT is ERC721Enumerable, Ownable, Pausable {
+contract NFT is ERC721Enumerable, Ownable, Pausable, ReentrancyGuard {
     using Strings for uint256;
 
     string private _baseTokenURI;
@@ -39,7 +40,12 @@ contract NFT is ERC721Enumerable, Ownable, Pausable {
     }
 
     // public
-    function pubMint(uint256 _quantity) public payable whenNotPaused {
+    function pubMint(uint256 _quantity)
+        public
+        payable
+        whenNotPaused
+        nonReentrant
+    {
         uint256 supply = totalSupply();
         uint256 cost = pubPrice * _quantity;
         mintCheck(_quantity, supply, cost);
@@ -60,6 +66,7 @@ contract NFT is ERC721Enumerable, Ownable, Pausable {
         public
         payable
         whenNotPaused
+        nonReentrant
     {
         uint256 supply = totalSupply();
         uint256 cost = prePrice * _quantity;
