@@ -104,21 +104,24 @@ describe('WhitelistSale', function () {
       return hexProof
     }
 
-    const quantity = 1;
+    const quantity = 3;
     const prePrice = await token.prePrice();
     const validMerkleProof = getHexProof(whitelisted[0].address);
 
-    expect(
-      token.preMint(quantity, validMerkleProof, {
-        value: prePrice,
-      })
-    );
+    const txn = await token.preMint(quantity, validMerkleProof, {
+      value: prePrice * quantity,
+    })
+    await txn.wait();
+    console.log("Minted");
 
-    // ホワリス外アドレスで、preMintが叩けないことを確認
+    const totalSupply = await token.totalSupply()
+    console.log('totalSupply: ', totalSupply)
+
+    // // ホワリス外アドレスで、preMintが叩けないことを確認
     const invalidMerkleProof = getHexProof(notWhitelisted[0].address);
     await expect(
       token.connect(notWhitelisted[0]).preMint(quantity, invalidMerkleProof, {
-        value: prePrice,
+        value: prePrice * quantity,
       })
     ).to.be.rejectedWith('Invalid Merkle Proof');
   })

@@ -12,8 +12,8 @@ contract NFT is ERC721Enumerable, Ownable, Pausable, ReentrancyGuard {
     using Strings for uint256;
 
     string private _baseTokenURI;
-    uint256 public prePrice = 0.01 ether;
-    uint256 public pubPrice = 0.02 ether;
+    uint256 public prePrice = 0.0001 ether;
+    uint256 public pubPrice = 0.0002 ether;
 
     string public contractName = "MINT SITE";
     string public contractSymbol = "MINT";
